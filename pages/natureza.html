@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Natureza — LIAD História Sonora</title>
+  <link rel="stylesheet" href="../styles.css">
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
+  <link rel="shortcut icon" href="/assets/icons/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
+
+</head>
+<body>
+  <div class="container">
+    <a href="../index.html" class="back-btn" aria-label="Voltar para categorias">← Voltar</a>
+
+    <div class="controls" role="region" aria-label="Controles de reprodução">
+      <img src="../assets/images/liad-logo-roxo.png" class="logo-sm" alt="LIAD">
+      <div class="control-group">
+        <label class="small" for="volumeRange">Volume</label>
+        <input id="volumeRange" type="range" min="0" max="1" step="0.01" aria-label="Controle de volume">
+        <button id="muteBtn" aria-pressed="false" aria-label="Ativar ou desativar som">🔊</button>
+            <button id="stopAll" aria-label="Parar todos os sons">⏹️</button>
+      </div>
+    </div>
+
+    <h2>Natureza</h2>
+    <p class="small">Toque os efeitos sonoros abaixo (clique para tocar/pausar)</p>
+
+    <section class="sounds-grid" aria-label="Lista de sons">
+      <button class="sound-btn" data-src="../assets/sounds/nature/nature_rain_light.mp3" aria-label="Chuva leve" tabindex="0">
+        <div class="emoji">🌧️</div>
+        <div>
+          <div class="label">Chuva leve</div>
+          <!-- div class="desc">nature_rain_light.mp3</div> -->
+        </div>
+      </button>
+
+      <button class="sound-btn" data-src="../assets/sounds/nature/nature_fire_crackle.mp3" aria-label="Fogueira estalando" tabindex="0">
+        <div class="emoji">🔥</div>
+        <div>
+          <div class="label">Fogueira</div>
+          <!-- <div class="desc">nature_fire_crackle.mp3</div> -->
+        </div>
+      </button>
+
+      <button class="sound-btn" data-src="../assets/sounds/nature/nature_stream.mp3" aria-label="Riacho" tabindex="0">
+        <div class="emoji">💧</div>
+        <div>
+          <div class="label">Riacho</div>
+          <!-- <div class="desc">nature_stream.mp3</div> -->
+        </div>
+      </button>
+    </section>
+  </div>
+
+  <script src="../app.js"></script>
+  <script>
+    (function(){
+      const engine = AudioEngineFactory.createEngine();
+      const buttons = document.querySelectorAll('.sound-btn');
+      const volumeRange = document.getElementById('volumeRange');
+      const muteBtn = document.getElementById('muteBtn');
+
+      volumeRange.value = window.LIAD.settings.volume;
+      muteBtn.setAttribute('aria-pressed', window.LIAD.settings.muted);
+
+      function applyVolume(v){
+        window.LIAD.settings.volume = Number(v);
+        window.LIAD.save();
+        if(engine.type === 'webaudio') engine.setVolume(window.LIAD.settings.muted ? 0 : window.LIAD.settings.volume);
+        buttons.forEach(btn => {
+          if(btn._audio && engine.type === 'htmlaudio') btn._audio.volume = window.LIAD.settings.muted ? 0 : window.LIAD.settings.volume;
+        });
+      }
+
+      volumeRange.addEventListener('input', (e)=>{
+        applyVolume(e.target.value);
+      });
+
+      muteBtn.addEventListener('click', ()=>{
+        window.LIAD.settings.muted = !window.LIAD.settings.muted;
+        window.LIAD.save();
+        // ensure audio engine respects the new muted flag
+        if(engine.type === 'webaudio') engine.setMuted(window.LIAD.settings.muted);
+        buttons.forEach(btn => {
+          if(btn._audio && engine.type === 'htmlaudio') btn._audio.volume = window.LIAD.settings.muted ? 0 : window.LIAD.settings.volume;
+        });
+        // === IMPORTANT: update the UI (text, aria, class) immediately ===
+        if(window.LIAD && window.LIAD.updateMuteUI) window.LIAD.updateMuteUI();
+      });
+
+      buttons.forEach(btn=>{
+        btn.addEventListener('keydown', (ev)=>{ if(ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); btn.click(); } });
+
+        btn.addEventListener('click', async ()=>{
+          const src = btn.dataset.src;
+          if(btn._playing){
+            if(engine.type === 'webaudio'){
+              if(btn._source){
+                try{ btn._source.stop(); }catch(e){}
+                btn._source = null;
+              }
+            }else{
+              if(btn._audio){
+                try{ btn._audio.pause(); btn._audio.currentTime = 0; }catch(e){}
+                btn._audio = null;
+              }
+            }
+            btn._playing = false;
+            btn.classList.remove('playing');
+            return;
+          }
+
+          btn.classList.add('playing');
+          btn._playing = true;
+
+          try{
+            if(engine.type === 'webaudio'){
+              if(!btn._buffer){
+                btn._buffer = await engine.loadBuffer(src);
+              }
+              const srcNode = engine.ctx.createBufferSource();
+              srcNode.buffer = btn._buffer;
+              srcNode.connect(engine.masterGain);
+              srcNode.start(0);
+              btn._source = srcNode;
+              srcNode.onended = () => {
+                btn._playing = false;
+                btn.classList.remove('playing');
+                btn._source = null;
+              };
+            }else{
+              if(!btn._audio){
+                btn._audio = await engine.loadAudio(src);
+              }
+              btn._audio.play();
+              btn._audio.onended = () => {
+                btn._playing = false;
+                btn.classList.remove('playing');
+                btn._audio = null;
+              };
+            }
+          }catch(err){
+            console.error('Erro ao tocar som', err);
+            try{
+              if(btn._audio){
+                btn._audio.pause();
+                btn._audio.currentTime = 0;
+              }
+              const a = new Audio(src);
+              a.volume = window.LIAD.settings.muted ? 0 : window.LIAD.settings.volume;
+              btn._audio = a;
+              btn._audio.play();
+              btn._audio.onended = () => { btn._playing = false; btn.classList.remove('playing'); btn._audio = null; };
+            }catch(e){ console.error(e); btn._playing = false; btn.classList.remove('playing'); }
+          }
+        });
+      });
+
+        // Stop all handler
+    const stopBtn = document.getElementById('stopAll');
+    if(stopBtn){
+      stopBtn.addEventListener('click', ()=>{
+        buttons.forEach(btn=>{
+          if(btn._playing){
+            if(engine.type === 'webaudio' && btn._source){ try{ btn._source.stop(); }catch(e){} btn._source = null; }
+            if(engine.type === 'htmlaudio' && btn._audio){ try{ btn._audio.pause(); btn._audio.currentTime = 0;}catch(e){} btn._audio = null; }
+            btn._playing = false;
+            btn.classList.remove('playing');
+          }
+        });
+      });
+    }
+    // sync mute UI on load (this is a redundant guard — app.js also syncs on DOMContentLoaded)
+    if(window.LIAD && window.LIAD.updateMuteUI) window.LIAD.updateMuteUI();
+  
+})();
+  </script>
+</body>
+</html>
