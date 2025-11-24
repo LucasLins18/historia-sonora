@@ -1,4 +1,4 @@
-# LIAD Sonoplastia — MVP
+# LIAD História Sonora — MVP
 
 Aplicativo web simples para tocar efeitos sonoros por categoria, pensado para contadores de histórias.
 
