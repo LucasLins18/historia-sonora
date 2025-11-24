@@ -210,3 +210,34 @@ body.muted .sound-btn .label { opacity: 0.85; }
 
 /* ensure stopAll spacing */
 #stopAll { margin-left:8px; }
+
+.botao-feedback {
+    /* Cor de Fundo Roxa (ex: #673AB7 - Purple 700 do Material Design) */
+    background-color: #673AB7;
+    
+    /* Cor do Texto Branco */
+    color: white;
+    
+    /* Remove sublinhado padrão de links */
+    text-decoration: none; 
+    
+    /* Espaçamento interno para dar volume ao botão */
+    padding: 8px 15px; 
+    
+    /* Bordas arredondadas (opcional) */
+    border-radius: 4px; 
+    
+    /* Transforma o link em um bloco inline para aceitar padding e width */
+    display: inline-block; 
+    
+    /* Pequena margem superior para separação (opcional) */
+    margin-top: 5px; 
+    
+    /* Faz o cursor parecer um dedo (opcional) */
+    cursor: pointer;
+}
+
+/* Efeito ao passar o mouse (Hover) */
+.botao-feedback:hover {
+    background-color: #512DA8; /* Uma tonalidade de roxo um pouco mais escura */
+}
